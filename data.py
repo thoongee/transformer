@@ -38,9 +38,12 @@ class Multi30k():
         self.vocab_min_freq = vocab_min_freq
         # print('self.lang_src: ',self.lang_src) # en
         # print('self.lang_tgt: ',self.lang_tgt) # de
+
+        # Build tokenizers for source and target languages
         self.tokenizer_src = self.build_tokenizer(self.lang_src)
         self.tokenizer_tgt = self.build_tokenizer(self.lang_tgt)
 
+        # Initialize dataset and vocab variables
         self.train = None
         self.valid = None
         self.test = None
@@ -56,6 +59,7 @@ class Multi30k():
 
 
     def build_dataset(self, raw_dir="raw", cache_dir=".data"):
+        # Build dataset from raw files or load from cache
         cache_dir = os.path.join(cache_dir, self.dataset_name)
         raw_dir = os.path.join(cache_dir, raw_dir)
         os.makedirs(raw_dir, exist_ok=True)
@@ -96,6 +100,7 @@ class Multi30k():
 
 
     def build_vocab(self, cache_dir=".data"):
+        # Build vocabulary from training data or load from cache
         assert self.train is not None
         def yield_tokens(is_src=True):
             for text_pair in self.train:
@@ -135,10 +140,13 @@ class Multi30k():
                 }
         assert lang in spacy_lang_dict.keys()
         # print('spacy_lang_dict[lang]: ',spacy_lang_dict[lang]) # en_core_web_sm
+
+        # Return tokenizer for the specified language
         return get_tokenizer("spacy", spacy_lang_dict[lang])
 
 
     def build_transform(self):
+        # Build transform functions for source and target sequences
         def get_transform(self, vocab):
             return T.Sequential(
                     T.VocabTransform(vocab),
@@ -152,6 +160,7 @@ class Multi30k():
 
 
     def collate_fn(self, pairs):
+        # Collate function to process a batch of data pairs
         src = [self.tokenizer_src(pair[0]) for pair in pairs]
         tgt = [self.tokenizer_tgt(pair[1]) for pair in pairs]
         batch_src = self.transform_src(src)
@@ -160,6 +169,7 @@ class Multi30k():
 
 
     def get_iter(self, **kwargs):
+        # Get data loaders for train, valid, and test sets
         if self.transform_src is None:
             self.build_transform()
         train_iter = DataLoader(self.train, collate_fn=self.collate_fn, **kwargs)
@@ -169,6 +179,7 @@ class Multi30k():
 
 
     def translate(self, model, src_sentence: str, decode_func):
+        # Translate a source sentence using the provided model and decode function
         model.eval()
         src = self.transform_src([self.tokenizer_src(src_sentence)]).view(1, -1)
         num_tokens = src.shape[1]

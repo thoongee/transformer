@@ -5,7 +5,6 @@ CHECKPOINT_DIR = "./checkpoint"
 
 N_EPOCH = 1000
 
-# BATCH_SIZE = 2048
 BATCH_SIZE = 512
 NUM_WORKERS = 8
 
