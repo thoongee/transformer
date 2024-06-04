@@ -1,10 +1,8 @@
+---
 # Transformer
 
 ‘Attention Is All You Need’ implementation in Pytorch.
 
----
-## Project Overview
-This project is an implementation of the Transformer model as described in the paper 'Attention Is All You Need' using Pytorch. The Transformer model is designed for sequence-to-sequence tasks, primarily focusing on natural language processing tasks like translation.
 
 ## Environment
 
@@ -34,40 +32,28 @@ cudnn : 8.4.0.27
     
 
 ---
-## Prerequisties
-- Python 3.8
-- Pytorch
-- Other dependencies listed in `requirements.txt`
-
-## Dataset
-We use the Multi30k dataset for training.
 
 ## Install
-Install all required dependencies and download the Multi30k dataset by running:
 
 ```bash
 bash prepare.sh
 ```
 
-## Usage
-
-### Run Training and Evaluation
-To start training and evaluation with the Multi30k dataset, run:
+## Run Train ([Multi30k](https://github.com/multi30k/dataset))
 
 ```bash
-python3 main.py
+python3 main.py --dropout 0.1 --batch_size 256 --optimizer adam --model attention
 ```
 
-### Select best checkpoint
-To select the best model checkpoint, run:
+## **Select best checkpoint**
 
 ```bash
 python3 select_best_checkpoint.py --checkpoint-dir ./checkpoint --best-model-path ./best_model.pt
 ```
 ### Hyper parameter setting
 
-- N_EPOCH = 1000
-- BATCH_SIZE = 512
+- N_EPOCH = 100
+- BATCH_SIZE = 256
 - NUM_WORKERS = 8
 - LEARNING_RATE = 1e-5
 - WEIGHT_DECAY = 5e-4
@@ -90,3 +76,7 @@ python3 select_best_checkpoint.py --checkpoint-dir ./checkpoint --best-model-pat
 - [Harvard NLP](http://nlp.seas.harvard.edu/2018/04/03/attention.html)
 - [hyunwoongko/transformer](https://github.com/hyunwoongko/transformer)
 - [WikiDocs](https://wikidocs.net/31379)
+
+```bash
+
+```

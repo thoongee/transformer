@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os, sys, time
 import logging
 
@@ -5,9 +6,11 @@ import torch
 from torch import nn, optim
 
 from config import *
-from models.build_model import build_model
+from models.build_model import *
 from data import Multi30k
 from utils import get_bleu_score, greedy_decode
+
+import argparse
 
 torch.cuda.empty_cache() # Free up gpu memory
 import os
@@ -74,6 +77,7 @@ def evaluate(model, data_loader, criterion):
             # Forward pass
             output, _ = model(src, tgt_x)
 
+
             # Flatten the outputs and targets for loss computation
             y_hat = output.contiguous().view(-1, output.shape[-1])
             y_gt = tgt_y.contiguous().view(-1)
@@ -91,9 +95,22 @@ def evaluate(model, data_loader, criterion):
     return loss_avr, bleu_score  # Return average loss and BLEU score
 
 
-def main():
+def main(args):
     # Build the model
-    model = build_model(len(DATASET.vocab_src), len(DATASET.vocab_tgt), device=DEVICE, dr_rate=DROPOUT_RATE)
+    import os
+    os.makedirs("./results/", exist_ok=True)
+    dropout_rate = args.dropout
+    batch_size = args.batch_size
+    optimz = args.optimizer
+    model_name = args.model
+    if model_name =="attention":
+        model = build_model(len(DATASET.vocab_src), len(DATASET.vocab_tgt), device=DEVICE, dr_rate=dropout_rate)
+    elif model_name =="dense":
+        model = build_model_dense(len(DATASET.vocab_src), len(DATASET.vocab_tgt), device=DEVICE, dr_rate=dropout_rate)
+    elif model_name =="lstm":
+        model = build_model_LSTM(len(DATASET.vocab_src), len(DATASET.vocab_tgt), device=DEVICE, dr_rate=dropout_rate)
+    elif model_name =="cnn":
+        model = build_model_CNN(len(DATASET.vocab_src), len(DATASET.vocab_tgt), device=DEVICE, dr_rate=dropout_rate)
 
     def initialize_weights(model):
         # Initialize model weights
@@ -103,32 +120,77 @@ def main():
     model.apply(initialize_weights)  # Apply weight initialization
 
     # Set up optimizer and learning rate scheduler
-    optimizer = optim.Adam(params=model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY, eps=ADAM_EPS)
+    if optimz=="adam":
+        optimizer = optim.Adam(params=model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY, eps=ADAM_EPS)
+    elif optimz=="adamW":
+        optimizer = optim.AdamW(params=model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY, eps=ADAM_EPS)
+    elif optimz=="SGD":
+        optimizer = optim.SGD(params=model.parameters(), lr=LEARNING_RATE)
+    elif optimz=="ASGD":
+        optimizer = optim.ASGD(params=model.parameters(),lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY, )
+    elif optimz=="RMSProp":
+        optimizer = optim.RMSprop(params=model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY, eps=ADAM_EPS, alpha=0.99, momentum=0.9)
+        
+        
+    
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, verbose=True, factor=SCHEDULER_FACTOR, patience=SCHEDULER_PATIENCE)
-
+    
     criterion = nn.CrossEntropyLoss(ignore_index=DATASET.pad_idx)  # Define loss function
+    #criterion = nn.CrossEntropyLoss()
 
     # Get data iterators for training, validation, and testing
-    train_iter, valid_iter, test_iter = DATASET.get_iter(batch_size=BATCH_SIZE, num_workers=NUM_WORKERS)
-
-    for epoch in range(N_EPOCH):
-        logging.info(f"*****epoch: {epoch:02}*****")
+    train_iter, valid_iter, test_iter = DATASET.get_iter(batch_size=batch_size, num_workers=NUM_WORKERS)
+    train_loss_list = []
+    val_loss_list = []
+    bl_sc = []
+    from tqdm import tqdm
+    for epoch in tqdm(range(N_EPOCH)):
         train_loss = train(model, train_iter, optimizer, criterion, epoch, CHECKPOINT_DIR)
-        logging.info(f"train_loss: {train_loss:.5f}")
         valid_loss, bleu_score = evaluate(model, valid_iter, criterion)
+        logging.info(f"valid_loss: {valid_loss:.5f}, bleu_score: {bleu_score:.5f}")
         if epoch > WARM_UP_STEP:
             scheduler.step(valid_loss)  # Update learning rate
-        logging.info(f"valid_loss: {valid_loss:.5f}, bleu_score: {bleu_score:.5f}")
+        train_loss_list.append(train_loss)
+        val_loss_list.append(valid_loss)
+        bl_sc.append(bleu_score)
 
         # Log translation example
-        logging.info(DATASET.translate(model, "A little girl climbing into a wooden playhouse .", greedy_decode))
+        #logging.info(DATASET.translate(model, "A little girl climbing into a wooden playhouse .", greedy_decode))
         # Expected output: "Ein kleines Mädchen klettert in ein Spielhaus aus Holz ."
 
     # Evaluate the model on the test set
     test_loss, bleu_score = evaluate(model, test_iter, criterion)
+    
+    f = open(f"./results/{dropout_rate}_{batch_size}_{optimz}_{model_name}.txt", 'w')
+    f.write(f"test_loss: {test_loss:.5f}, bleu_score: {bleu_score:.5f}")
+    f.close()
+    
+    import pickle
+    
+    data = {
+        'train': train_loss_list,
+        'val': val_loss_list,
+        'bleu_score': bl_sc
+    }
+
+    # save
+    with open(f'./results/{dropout_rate}_{batch_size}_{optimz}_{model_name}.pickle', 'wb') as f:
+        pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+    
     logging.info(f"test_loss: {test_loss:.5f}, bleu_score: {bleu_score:.5f}")
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser("Transformer")
+
+    parser.add_argument("--dropout", type=float, default=0.1)
+    parser.add_argument("--batch_size", type=int, default=256)
+    parser.add_argument("--optimizer", type=str, default="adam")
+    parser.add_argument("--model", type=str, default="attention")
+    parser.add_argument("--file_name", type=str, default="result1")
+    
+    args = parser.parse_args()
+
+    
     torch.manual_seed(0)
     logging.basicConfig(level=logging.INFO)
-    main()
+    main(args)
