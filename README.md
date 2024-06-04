@@ -40,22 +40,26 @@ cudnn : 8.4.0.27
 - Other dependencies listed in `requirements.txt`
 
 ## Dataset
-We use the Multi30k dataset for training. Download the dataset from Multi30k if not included.
+We use the Multi30k dataset for training.
 
 ## Install
-
+Install all required dependencies and download the Multi30k dataset by running:
 
 ```bash
 bash prepare.sh
 ```
 
-## Run Train ([Multi30k](https://github.com/multi30k/dataset))
+## Usage
+
+### Run Training and Evaluation
+To start training and evaluation with the Multi30k dataset, run:
 
 ```bash
 python3 main.py
 ```
 
-## **Select best checkpoint**
+### Select best checkpoint
+To select the best model checkpoint, run:
 
 ```bash
 python3 select_best_checkpoint.py --checkpoint-dir ./checkpoint --best-model-path ./best_model.pt
