@@ -3,6 +3,8 @@
 ‘Attention Is All You Need’ implementation in Pytorch.
 
 ---
+## Project Overview
+This project is an implementation of the Transformer model as described in the paper 'Attention Is All You Need' using Pytorch. The Transformer model is designed for sequence-to-sequence tasks, primarily focusing on natural language processing tasks like translation.
 
 ## Environment
 
@@ -32,8 +34,16 @@ cudnn : 8.4.0.27
     
 
 ---
+## Prerequisties
+- Python 3.8
+- Pytorch
+- Other dependencies listed in `requirements.txt`
+
+## Dataset
+We use the Multi30k dataset for training. Download the dataset from Multi30k if not included.
 
 ## Install
+
 
 ```bash
 bash prepare.sh
